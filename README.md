@@ -47,10 +47,6 @@ python main.py
 - Güvenli anahtar türetme için PBKDF2 kullanır
 - Şifrelenmiş dosyalar `.encrypted` uzantısı ile kaydedilir
 
-## Ekran Görüntüleri
-
-![Uygulama Arayüzü](screenshots/app_screenshot.png)
-
 ## Lisans
 
 Bu proje MIT lisansı altında lisanslanmıştır. Detaylı bilgi için [LICENSE](LICENSE) dosyasına bakınız. 
