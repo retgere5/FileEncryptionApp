@@ -3,6 +3,11 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QProgressBar, QMessageBox)
 from PySide6.QtCore import Qt
 from ..crypto.crypto_worker import CryptoWorker
+from ..utils.constants import (APP_NAME, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT,
+                           TITLE_TEXT, FILE_BUTTON_TEXT, FILE_PLACEHOLDER,
+                           PASSWORD_PLACEHOLDER, ENCRYPT_BUTTON_TEXT,
+                           DECRYPT_BUTTON_TEXT, PROCESSING_TEXT, COMPLETED_TEXT,
+                           ERROR_TITLE, SUCCESS_TITLE, SUCCESS_MESSAGE)
 from .styles import MAIN_STYLE, TITLE_STYLE, STATUS_STYLE
 
 class MainWindow(QMainWindow):
@@ -11,8 +16,8 @@ class MainWindow(QMainWindow):
         self.init_ui()
         
     def init_ui(self):
-        self.setWindowTitle("Dosya Şifreleme Uygulaması")
-        self.setMinimumSize(800, 500)
+        self.setWindowTitle(APP_NAME)
+        self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
         self.setStyleSheet(MAIN_STYLE)
         
         main_widget = QWidget()
@@ -28,18 +33,18 @@ class MainWindow(QMainWindow):
         self.setup_progress(layout)
         
     def setup_title(self, layout):
-        title = QLabel("Dosya Şifreleme")
+        title = QLabel(TITLE_TEXT)
         title.setStyleSheet(TITLE_STYLE)
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
 
     def setup_file_selection(self, layout):
-        browse_btn = QPushButton("📂 Dosya Seç")
+        browse_btn = QPushButton(FILE_BUTTON_TEXT)
         browse_btn.clicked.connect(self.browse_file)
         layout.addWidget(browse_btn)
         
         self.file_path = QLineEdit()
-        self.file_path.setPlaceholderText("Seçilen dosya yolu...")
+        self.file_path.setPlaceholderText(FILE_PLACEHOLDER)
         self.file_path.setReadOnly(True)
         layout.addWidget(self.file_path)
 
@@ -47,7 +52,7 @@ class MainWindow(QMainWindow):
         password_layout = QHBoxLayout()
         
         self.password = QLineEdit()
-        self.password.setPlaceholderText("Şifre giriniz...")
+        self.password.setPlaceholderText(PASSWORD_PLACEHOLDER)
         self.password.setEchoMode(QLineEdit.Password)
         
         self.show_password_btn = QPushButton("👁")
@@ -61,8 +66,8 @@ class MainWindow(QMainWindow):
 
     def setup_buttons(self, layout):
         buttons_layout = QHBoxLayout()
-        self.encrypt_btn = QPushButton("🔒 Şifrele")
-        self.decrypt_btn = QPushButton("🔓 Şifre Çöz")
+        self.encrypt_btn = QPushButton(ENCRYPT_BUTTON_TEXT)
+        self.decrypt_btn = QPushButton(DECRYPT_BUTTON_TEXT)
         
         self.encrypt_btn.clicked.connect(lambda: self.process_file('encrypt'))
         self.decrypt_btn.clicked.connect(lambda: self.process_file('decrypt'))
@@ -89,7 +94,7 @@ class MainWindow(QMainWindow):
 
     def process_file(self, operation):
         if not self.file_path.text() or not self.password.text():
-            QMessageBox.warning(self, "Hata", "Lütfen dosya ve şifre giriniz!")
+            QMessageBox.warning(self, ERROR_TITLE, "Lütfen dosya ve şifre giriniz!")
             return
 
         self.update_ui_for_processing()
@@ -112,18 +117,18 @@ class MainWindow(QMainWindow):
 
     def update_progress(self, value):
         self.progress.setValue(value)
-        self.status_label.setText(f"İşlem devam ediyor... (%{value})")
+        self.status_label.setText(PROCESSING_TEXT.format(value))
 
     def process_completed(self, output_path):
         self.progress.setValue(100)
-        self.status_label.setText("İşlem tamamlandı!")
+        self.status_label.setText(COMPLETED_TEXT)
         self.encrypt_btn.setEnabled(True)
         self.decrypt_btn.setEnabled(True)
-        QMessageBox.information(self, "Başarılı", f"İşlem tamamlandı!\nDosya kaydedildi: {output_path}")
+        QMessageBox.information(self, SUCCESS_TITLE, SUCCESS_MESSAGE.format(output_path))
 
     def process_error(self, error_message):
         self.progress.setVisible(False)
         self.status_label.setVisible(False)
         self.encrypt_btn.setEnabled(True)
         self.decrypt_btn.setEnabled(True)
-        QMessageBox.critical(self, "Hata", f"Bir hata oluştu: {error_message}") 
+        QMessageBox.critical(self, ERROR_TITLE, error_message) 
