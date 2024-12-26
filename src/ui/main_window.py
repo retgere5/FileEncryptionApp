@@ -2,6 +2,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QPushButton, QLabel, QLineEdit, QFileDialog, 
                              QProgressBar, QMessageBox)
 from PySide6.QtCore import Qt
+import os
 from ..crypto.crypto_worker import CryptoWorker
 from ..utils.constants import (APP_NAME, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT,
                            TITLE_TEXT, FILE_BUTTON_TEXT, FILE_PLACEHOLDER,
@@ -124,7 +125,31 @@ class MainWindow(QMainWindow):
         self.status_label.setText(COMPLETED_TEXT)
         self.encrypt_btn.setEnabled(True)
         self.decrypt_btn.setEnabled(True)
+        
+        # İşlem başarılı mesajını göster
         QMessageBox.information(self, SUCCESS_TITLE, SUCCESS_MESSAGE.format(output_path))
+        
+        # Kullanıcıya orijinal dosyayı silmek isteyip istemediğini sor
+        reply = QMessageBox.question(
+            self,
+            "Dosya Silme",
+            "Orijinal dosyayı silmek ister misiniz?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        # Eğer kullanıcı evet derse, orijinal dosyayı sil
+        if reply == QMessageBox.Yes:
+            try:
+                os.remove(self.file_path.text())
+                QMessageBox.information(self, "Başarılı", "Orijinal dosya silindi.")
+                self.file_path.clear()  # Dosya yolu alanını temizle
+            except Exception as e:
+                QMessageBox.warning(
+                    self,
+                    "Uyarı",
+                    f"Dosya silinirken bir hata oluştu: {str(e)}"
+                )
 
     def process_error(self, error_message):
         self.progress.setVisible(False)
