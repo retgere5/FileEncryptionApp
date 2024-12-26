@@ -3,7 +3,7 @@ import base64
 import os
 import secrets
 import ctypes
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
@@ -32,32 +32,38 @@ class CryptoWorker(QThread):
 
     def _secure_cleanup(self):
         """Hassas verileri bellekten güvenli bir şekilde temizler."""
-        if self._password:
+        if hasattr(self, '_password') and self._password:
             ctypes.memset(self._password, 0, len(self._password))
             del self._password
-        if self._key:
+        if hasattr(self, '_key') and self._key:
             ctypes.memset(self._key, 0, len(self._key))
             del self._key
-        if self._salt:
+        if hasattr(self, '_salt') and self._salt:
             ctypes.memset(self._salt, 0, len(self._salt))
             del self._salt
 
     def get_key_from_password(self):
         """Şifreden güvenli bir anahtar türetir."""
-        if self.operation == 'encrypt':
-            self._salt = secrets.token_bytes(SALT_SIZE)
-        else:
-            # Şifre çözme işleminde salt değerini dosyadan oku
-            with open(self.file_path, 'rb') as f:
-                self._salt = f.read(SALT_SIZE)
+        try:
+            if self.operation == 'encrypt':
+                self._salt = secrets.token_bytes(SALT_SIZE)
+            else:
+                # Şifre çözme işleminde salt değerini dosyadan oku
+                with open(self.file_path, 'rb') as f:
+                    self._salt = f.read(SALT_SIZE)
+                    if len(self._salt) != SALT_SIZE:
+                        raise InvalidToken("Geçersiz şifrelenmiş dosya formatı")
 
-        kdf = PBKDF2HMAC(
-            algorithm=getattr(hashes, HASH_ALGORITHM)(),
-            length=KEY_LENGTH,
-            salt=self._salt,
-            iterations=ITERATIONS,
-        )
-        return base64.urlsafe_b64encode(kdf.derive(self._password))
+            kdf = PBKDF2HMAC(
+                algorithm=getattr(hashes, HASH_ALGORITHM)(),
+                length=KEY_LENGTH,
+                salt=self._salt,
+                iterations=ITERATIONS,
+            )
+            return base64.urlsafe_b64encode(kdf.derive(self._password))
+        except Exception as e:
+            self._secure_cleanup()
+            raise e
 
     def process_file_in_chunks(self, input_path, output_path, cipher_suite):
         """Dosyayı güvenli bir şekilde şifreler veya şifresini çözer."""
@@ -71,28 +77,32 @@ class CryptoWorker(QThread):
             
             with open(input_path, 'rb') as infile:
                 with open(output_path, 'wb') as outfile:
-                    # Şifreleme işleminde salt değerini dosyanın başına yaz
                     if self.operation == 'encrypt':
+                        # Şifreleme işleminde salt değerini dosyanın başına yaz
                         outfile.write(self._salt)
-                    else:
-                        # Şifre çözme işleminde salt kısmını atla
-                        infile.seek(SALT_SIZE)
-
-                    while True:
-                        chunk = infile.read(self.CHUNK_SIZE)
-                        if not chunk:
-                            break
-                            
-                        if self.operation == 'encrypt':
-                            processed_chunk = cipher_suite.encrypt(chunk)
-                        else:
-                            processed_chunk = cipher_suite.decrypt(chunk)
-                            
-                        outfile.write(processed_chunk)
                         
-                        bytes_processed += len(chunk)
-                        progress = int((bytes_processed / total_size) * 100)
-                        self.progress.emit(progress)
+                        # Dosyayı şifrele
+                        while True:
+                            chunk = infile.read(self.CHUNK_SIZE)
+                            if not chunk:
+                                break
+                            processed_chunk = cipher_suite.encrypt(chunk)
+                            outfile.write(processed_chunk)
+                            bytes_processed += len(chunk)
+                            progress = int((bytes_processed / total_size) * 100)
+                            self.progress.emit(progress)
+                    else:
+                        # Salt değerini atla
+                        infile.seek(SALT_SIZE)
+                        
+                        # Şifrelenmiş veriyi oku ve çöz
+                        encrypted_data = infile.read()
+                        try:
+                            decrypted_data = cipher_suite.decrypt(encrypted_data)
+                            outfile.write(decrypted_data)
+                            self.progress.emit(100)
+                        except InvalidToken:
+                            raise InvalidToken("Yanlış şifre veya bozuk dosya")
 
             # Çıktı dosyasının izinlerini ayarla
             os.chmod(output_path, SECURE_FILE_PERMISSIONS)
