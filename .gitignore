@@ -36,4 +36,5 @@ ENV/
 Thumbs.db
 
 # Application specific
-*.encrypted 
+*.encrypted
+cleanup.py 
