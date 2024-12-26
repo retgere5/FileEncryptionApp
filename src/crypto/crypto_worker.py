@@ -3,6 +3,7 @@ import base64
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import os
 
 from ..utils.constants import SALT, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM
 from ..utils.file_handler import validate_file_path, get_output_path
@@ -12,6 +13,9 @@ class CryptoWorker(QThread):
     progress = Signal(int)
     finished = Signal(str)
     error = Signal(str)
+    
+    # Dosyaları bu boyutta parçalar halinde işleyeceğiz
+    CHUNK_SIZE = 1024 * 1024  # 1MB
 
     def __init__(self, operation, file_path, password):
         super().__init__()
@@ -28,6 +32,28 @@ class CryptoWorker(QThread):
         )
         return base64.urlsafe_b64encode(kdf.derive(password.encode()))
 
+    def process_file_in_chunks(self, input_path, output_path, cipher_suite):
+        total_size = os.path.getsize(input_path)
+        bytes_processed = 0
+        
+        with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
+            while True:
+                chunk = infile.read(self.CHUNK_SIZE)
+                if not chunk:
+                    break
+                    
+                if self.operation == 'encrypt':
+                    processed_chunk = cipher_suite.encrypt(chunk)
+                else:
+                    processed_chunk = cipher_suite.decrypt(chunk)
+                    
+                outfile.write(processed_chunk)
+                
+                # İlerlemeyi güncelle
+                bytes_processed += len(chunk)
+                progress = int((bytes_processed / total_size) * 100)
+                self.progress.emit(progress)
+
     def run(self):
         try:
             # Dosya yolunu doğrula
@@ -36,28 +62,18 @@ class CryptoWorker(QThread):
                 self.error.emit(error_message)
                 return
 
-            self.progress.emit(10)
+            # Anahtar oluştur
+            self.progress.emit(5)
             key = self.get_key_from_password(self.password)
             cipher_suite = Fernet(key)
             
-            self.progress.emit(30)
-            
-            with open(self.file_path, 'rb') as file:
-                file_data = file.read()
-            
-            self.progress.emit(50)
-            
-            if self.operation == 'encrypt':
-                processed_data = cipher_suite.encrypt(file_data)
-            else:
-                processed_data = cipher_suite.decrypt(file_data)
-            
-            self.progress.emit(75)
-            
+            # Çıktı dosyası yolunu al
             output_path = get_output_path(self.file_path, self.operation)
-            with open(output_path, 'wb') as file:
-                file.write(processed_data)
             
+            # Dosyayı parçalar halinde işle
+            self.process_file_in_chunks(self.file_path, output_path, cipher_suite)
+            
+            # İşlem tamamlandı
             self.progress.emit(100)
             self.finished.emit(output_path)
             
