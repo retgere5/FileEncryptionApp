@@ -21,8 +21,8 @@ Python ve PySide6 ile geliştirilmiş modern ve güvenli bir dosya şifreleme uy
 
 1. Depoyu klonlayın
 ```bash
-git clone https://github.com/retgere5/file_encryption_app.git
-cd file_encryption_app
+git clone https://github.com/retgere5/FileEncryptionApp.git
+cd FileEncryptionApp
 ```
 
 2. Bağımlılıkları yükleyin
