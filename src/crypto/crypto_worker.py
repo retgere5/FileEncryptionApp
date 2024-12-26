@@ -6,6 +6,7 @@ import ctypes
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+import struct
 
 from ..utils.constants import (SALT_SIZE, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM,
                            SECURE_FILE_PERMISSIONS, ERROR_MESSAGES)
@@ -17,8 +18,8 @@ class CryptoWorker(QThread):
     finished = Signal(str)
     error = Signal(str)
     
-    CHUNK_SIZE = 1024 * 1024  # 1MB
-    FERNET_OVERHEAD = 80  # Fernet her chunk'a eklediği ekstra veri boyutu
+    CHUNK_SIZE = 64 * 1024  # 64KB
+    FERNET_OVERHEAD = 80  # Fernet token overhead size
 
     def __init__(self, operation, file_path, password):
         super().__init__()
@@ -66,6 +67,71 @@ class CryptoWorker(QThread):
             self._secure_cleanup()
             raise e
 
+    def encrypt_file(self, input_path, output_path, cipher_suite):
+        """Dosyayı şifreler."""
+        total_size = os.path.getsize(input_path)
+        bytes_processed = 0
+        
+        with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
+            # Salt değerini dosyanın başına yaz
+            outfile.write(self._salt)
+            
+            # Dosyayı parçalar halinde şifrele
+            while True:
+                chunk = infile.read(self.CHUNK_SIZE)
+                if not chunk:
+                    break
+                
+                # Şifrelenmiş parçayı oluştur
+                encrypted_chunk = cipher_suite.encrypt(chunk)
+                
+                # Parça boyutunu yaz (4 byte)
+                outfile.write(struct.pack('<I', len(encrypted_chunk)))
+                
+                # Şifrelenmiş parçayı yaz
+                outfile.write(encrypted_chunk)
+                
+                bytes_processed += len(chunk)
+                progress = int((bytes_processed / total_size) * 100)
+                self.progress.emit(progress)
+
+    def decrypt_file(self, input_path, output_path, cipher_suite):
+        """Dosyanın şifresini çözer."""
+        total_size = os.path.getsize(input_path) - SALT_SIZE
+        bytes_processed = SALT_SIZE  # Salt boyutundan başla
+        
+        with open(input_path, 'rb') as infile, open(output_path, 'wb') as outfile:
+            # Salt değerini atla
+            infile.seek(SALT_SIZE)
+            
+            # Parçalar halinde şifreyi çöz
+            while bytes_processed < total_size:
+                try:
+                    # Parça boyutunu oku (4 byte)
+                    size_data = infile.read(4)
+                    if not size_data or len(size_data) < 4:
+                        break
+                        
+                    chunk_size = struct.unpack('<I', size_data)[0]
+                    
+                    # Şifrelenmiş parçayı oku
+                    encrypted_chunk = infile.read(chunk_size)
+                    if not encrypted_chunk or len(encrypted_chunk) != chunk_size:
+                        raise InvalidToken("Dosya formatı bozuk")
+                    
+                    # Parçanın şifresini çöz
+                    decrypted_chunk = cipher_suite.decrypt(encrypted_chunk)
+                    outfile.write(decrypted_chunk)
+                    
+                    bytes_processed += 4 + chunk_size
+                    progress = int((bytes_processed / total_size) * 100)
+                    self.progress.emit(progress)
+                    
+                except InvalidToken:
+                    raise InvalidToken("Yanlış şifre veya bozuk dosya")
+                except (struct.error, ValueError):
+                    raise InvalidToken("Dosya formatı bozuk")
+
     def process_file_in_chunks(self, input_path, output_path, cipher_suite):
         """Dosyayı güvenli bir şekilde şifreler veya şifresini çözer."""
         try:
@@ -73,50 +139,11 @@ class CryptoWorker(QThread):
             if os.path.exists(output_path):
                 os.chmod(output_path, SECURE_FILE_PERMISSIONS)
 
-            total_size = os.path.getsize(input_path)
-            bytes_processed = 0
-            
-            with open(input_path, 'rb') as infile:
-                with open(output_path, 'wb') as outfile:
-                    if self.operation == 'encrypt':
-                        # Şifreleme işleminde salt değerini dosyanın başına yaz
-                        outfile.write(self._salt)
-                        
-                        # Dosyayı şifrele
-                        while True:
-                            chunk = infile.read(self.CHUNK_SIZE)
-                            if not chunk:
-                                break
-                            processed_chunk = cipher_suite.encrypt(chunk)
-                            outfile.write(processed_chunk)
-                            bytes_processed += len(chunk)
-                            progress = int((bytes_processed / total_size) * 100)
-                            self.progress.emit(progress)
-                    else:
-                        try:
-                            # Salt değerini atla
-                            infile.seek(SALT_SIZE)
-                            
-                            # Şifrelenmiş veriyi parçalar halinde oku ve çöz
-                            encrypted_size = total_size - SALT_SIZE
-                            while bytes_processed < encrypted_size:
-                                # Fernet overhead'i hesaba katarak chunk boyutunu ayarla
-                                chunk_with_overhead = self.CHUNK_SIZE + self.FERNET_OVERHEAD
-                                encrypted_chunk = infile.read(chunk_with_overhead)
-                                if not encrypted_chunk:
-                                    break
-                                
-                                try:
-                                    decrypted_chunk = cipher_suite.decrypt(encrypted_chunk)
-                                    outfile.write(decrypted_chunk)
-                                    bytes_processed += len(encrypted_chunk)
-                                    progress = int((bytes_processed / encrypted_size) * 100)
-                                    self.progress.emit(progress)
-                                except InvalidToken:
-                                    raise InvalidToken("Yanlış şifre veya bozuk dosya")
-                                
-                        except InvalidToken as e:
-                            raise e
+            # İşleme göre uygun fonksiyonu çağır
+            if self.operation == 'encrypt':
+                self.encrypt_file(input_path, output_path, cipher_suite)
+            else:
+                self.decrypt_file(input_path, output_path, cipher_suite)
 
             # Çıktı dosyasının izinlerini ayarla
             os.chmod(output_path, SECURE_FILE_PERMISSIONS)
