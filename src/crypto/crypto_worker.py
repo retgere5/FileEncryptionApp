@@ -18,6 +18,7 @@ class CryptoWorker(QThread):
     error = Signal(str)
     
     CHUNK_SIZE = 1024 * 1024  # 1MB
+    FERNET_OVERHEAD = 80  # Fernet her chunk'a eklediği ekstra veri boyutu
 
     def __init__(self, operation, file_path, password):
         super().__init__()
@@ -92,17 +93,30 @@ class CryptoWorker(QThread):
                             progress = int((bytes_processed / total_size) * 100)
                             self.progress.emit(progress)
                     else:
-                        # Salt değerini atla
-                        infile.seek(SALT_SIZE)
-                        
-                        # Şifrelenmiş veriyi oku ve çöz
-                        encrypted_data = infile.read()
                         try:
-                            decrypted_data = cipher_suite.decrypt(encrypted_data)
-                            outfile.write(decrypted_data)
-                            self.progress.emit(100)
-                        except InvalidToken:
-                            raise InvalidToken("Yanlış şifre veya bozuk dosya")
+                            # Salt değerini atla
+                            infile.seek(SALT_SIZE)
+                            
+                            # Şifrelenmiş veriyi parçalar halinde oku ve çöz
+                            encrypted_size = total_size - SALT_SIZE
+                            while bytes_processed < encrypted_size:
+                                # Fernet overhead'i hesaba katarak chunk boyutunu ayarla
+                                chunk_with_overhead = self.CHUNK_SIZE + self.FERNET_OVERHEAD
+                                encrypted_chunk = infile.read(chunk_with_overhead)
+                                if not encrypted_chunk:
+                                    break
+                                
+                                try:
+                                    decrypted_chunk = cipher_suite.decrypt(encrypted_chunk)
+                                    outfile.write(decrypted_chunk)
+                                    bytes_processed += len(encrypted_chunk)
+                                    progress = int((bytes_processed / encrypted_size) * 100)
+                                    self.progress.emit(progress)
+                                except InvalidToken:
+                                    raise InvalidToken("Yanlış şifre veya bozuk dosya")
+                                
+                        except InvalidToken as e:
+                            raise e
 
             # Çıktı dosyasının izinlerini ayarla
             os.chmod(output_path, SECURE_FILE_PERMISSIONS)
