@@ -3,13 +3,16 @@ import base64
 import os
 import secrets
 import ctypes
+
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import struct
 
-from ..utils.constants import (SALT_SIZE, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM,
-                           SECURE_FILE_PERMISSIONS, ERROR_MESSAGES)
+from ..utils.constants import (
+    SALT_SIZE, ITERATIONS, KEY_LENGTH, HASH_ALGORITHM,
+    SECURE_FILE_PERMISSIONS, ERROR_MESSAGES
+)
 from ..utils.file_handler import validate_file_path, get_output_path
 from ..utils.error_handler import handle_crypto_error
 

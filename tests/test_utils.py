@@ -1,6 +1,7 @@
 import unittest
 import os
 import tempfile
+
 from src.utils.file_handler import validate_file_path, get_output_path
 from src.utils.error_handler import handle_crypto_error
 from cryptography.fernet import InvalidToken
@@ -40,12 +41,12 @@ class TestUtils(unittest.TestCase):
         # InvalidToken hatası için test
         success, message = handle_crypto_error(InvalidToken())
         self.assertFalse(success)
-        self.assertIn("Yanlış şifre", message)
+        self.assertIn("Geçersiz şifre", message)
         
         # IOError için test
         success, message = handle_crypto_error(IOError("Test error"))
         self.assertFalse(success)
-        self.assertIn("okuma/yazma hatası", message)
+        self.assertIn("Dosya işleme hatası", message)
         
         # Genel hata için test
         success, message = handle_crypto_error(Exception("Test error"))

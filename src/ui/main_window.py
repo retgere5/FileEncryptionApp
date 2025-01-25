@@ -1,14 +1,19 @@
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-                             QPushButton, QLabel, QLineEdit, QFileDialog, 
-                             QProgressBar, QMessageBox)
+from PySide6.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QLabel, QLineEdit, QFileDialog, 
+    QProgressBar, QMessageBox
+)
 from PySide6.QtCore import Qt
 import os
+
 from ..crypto.crypto_worker import CryptoWorker
-from ..utils.constants import (APP_NAME, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT,
-                           TITLE_TEXT, FILE_BUTTON_TEXT, FILE_PLACEHOLDER,
-                           PASSWORD_PLACEHOLDER, ENCRYPT_BUTTON_TEXT,
-                           DECRYPT_BUTTON_TEXT, PROCESSING_TEXT, COMPLETED_TEXT,
-                           ERROR_TITLE, SUCCESS_TITLE, SUCCESS_MESSAGE)
+from ..utils.constants import (
+    APP_NAME, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT,
+    TITLE_TEXT, FILE_BUTTON_TEXT, FILE_PLACEHOLDER,
+    PASSWORD_PLACEHOLDER, ENCRYPT_BUTTON_TEXT,
+    DECRYPT_BUTTON_TEXT, PROCESSING_TEXT, COMPLETED_TEXT,
+    ERROR_TITLE, SUCCESS_TITLE, SUCCESS_MESSAGE
+)
 from .styles import MAIN_STYLE, TITLE_STYLE, STATUS_STYLE
 
 class MainWindow(QMainWindow):

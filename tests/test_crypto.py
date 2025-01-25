@@ -1,6 +1,7 @@
 import unittest
 import os
 import tempfile
+
 from src.crypto.crypto_worker import CryptoWorker
 
 class TestCrypto(unittest.TestCase):
@@ -55,7 +56,7 @@ class TestCrypto(unittest.TestCase):
         decrypt_worker.run()
         
         self.assertIsNotNone(error_message)
-        self.assertIn("Yanlış şifre", error_message)
+        self.assertIn("Geçersiz şifre", error_message)
 
 if __name__ == '__main__':
     unittest.main() 
