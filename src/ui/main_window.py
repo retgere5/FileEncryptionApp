@@ -7,62 +7,139 @@ from PySide6.QtCore import Qt
 import os
 
 from ..crypto.crypto_worker import CryptoWorker
-from ..utils.constants import (
-    APP_NAME, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT,
-    TITLE_TEXT, FILE_BUTTON_TEXT, FILE_PLACEHOLDER,
-    PASSWORD_PLACEHOLDER, ENCRYPT_BUTTON_TEXT,
-    DECRYPT_BUTTON_TEXT, PROCESSING_TEXT, COMPLETED_TEXT,
-    ERROR_TITLE, SUCCESS_TITLE, SUCCESS_MESSAGE
+from ..utils.languages import TRANSLATIONS
+from .styles import (
+    DARK_THEME, LIGHT_THEME,
+    get_main_style, get_title_style,
+    get_status_style, get_theme_toggle_style,
+    get_lang_toggle_style, get_password_toggle_style
 )
-from .styles import MAIN_STYLE, TITLE_STYLE, STATUS_STYLE
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.current_theme = DARK_THEME
+        self.current_lang = "TR"
         self.init_ui()
         
     def init_ui(self):
-        self.setWindowTitle(APP_NAME)
-        self.setMinimumSize(WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT)
-        self.setStyleSheet(MAIN_STYLE)
+        self.setWindowTitle(self.tr("app_name"))
+        self.setMinimumSize(800, 500)  # Sabit pencere boyutu
+        self.apply_theme()
         
+        # Ana widget ve layout
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
-        layout = QVBoxLayout(main_widget)
-        layout.setSpacing(20)
-        layout.setContentsMargins(40, 40, 40, 40)
+        main_layout = QVBoxLayout(main_widget)
+        main_layout.setSpacing(20)
+        main_layout.setContentsMargins(40, 40, 40, 40)
 
-        self.setup_title(layout)
-        self.setup_file_selection(layout)
-        self.setup_password_input(layout)
-        self.setup_buttons(layout)
-        self.setup_progress(layout)
+        # Üst bar için widget ve layout
+        top_bar = QWidget()
+        top_layout = QHBoxLayout(top_bar)
+        top_layout.setContentsMargins(0, 0, 0, 0)
         
+        # Dil değiştirme butonu (sol)
+        self.lang_toggle = QPushButton(self.current_lang)
+        self.lang_toggle.setStyleSheet(get_lang_toggle_style(self.current_theme))
+        self.lang_toggle.clicked.connect(self.toggle_language)
+        
+        # Tema değiştirme butonu (sağ)
+        self.theme_toggle = QPushButton("🌙" if self.current_theme == DARK_THEME else "☀️")
+        self.theme_toggle.setStyleSheet(get_theme_toggle_style(self.current_theme))
+        self.theme_toggle.clicked.connect(self.toggle_theme)
+        
+        # Butonları üst bar'a ekle
+        top_layout.addWidget(self.lang_toggle, alignment=Qt.AlignLeft)
+        top_layout.addStretch()  # Ortadaki boşluk
+        top_layout.addWidget(self.theme_toggle, alignment=Qt.AlignRight)
+        
+        # Üst bar'ı ana layout'a ekle
+        main_layout.addWidget(top_bar)
+        
+        # Diğer UI elemanları
+        self.setup_title(main_layout)
+        self.setup_file_selection(main_layout)
+        self.setup_password_input(main_layout)
+        self.setup_buttons(main_layout)
+        self.setup_progress(main_layout)
+        
+    def tr(self, key):
+        """Dil çevirisi için yardımcı fonksiyon"""
+        return TRANSLATIONS[self.current_lang][key]
+        
+    def setup_toggle_buttons(self):
+        margin = 40  # layout ile aynı margin
+        button_width = 32
+        
+        # Tema değiştirme butonu (sağ üst köşe)
+        self.theme_toggle = QPushButton("🌙" if self.current_theme == DARK_THEME else "☀️")
+        self.theme_toggle.setStyleSheet(get_theme_toggle_style(self.current_theme))
+        self.theme_toggle.clicked.connect(self.toggle_theme)
+        self.theme_toggle.setParent(self)
+        self.theme_toggle.move(self.width() - (margin + button_width), margin)
+        
+        # Dil değiştirme butonu (sol üst köşe)
+        self.lang_toggle = QPushButton(self.current_lang)
+        self.lang_toggle.setStyleSheet(get_lang_toggle_style(self.current_theme))
+        self.lang_toggle.clicked.connect(self.toggle_language)
+        self.lang_toggle.setParent(self)
+        self.lang_toggle.move(margin, margin)
+        
+        # Pencere yeniden boyutlandırıldığında butonların pozisyonunu güncelle
+        def update_button_positions(event):
+            width = event.size().width()
+            self.theme_toggle.move(width - (margin + button_width), margin)
+            self.lang_toggle.move(margin, margin)
+            
+        self.resizeEvent = update_button_positions
+
+    def toggle_theme(self):
+        self.current_theme = LIGHT_THEME if self.current_theme == DARK_THEME else DARK_THEME
+        self.theme_toggle.setText("🌙" if self.current_theme == DARK_THEME else "☀️")
+        self.apply_theme()
+
+    def apply_theme(self):
+        self.setStyleSheet(get_main_style(self.current_theme))
+        if hasattr(self, 'title'):
+            self.title.setStyleSheet(get_title_style(self.current_theme))
+        if hasattr(self, 'status_label'):
+            self.status_label.setStyleSheet(get_status_style(self.current_theme))
+        if hasattr(self, 'theme_toggle'):
+            self.theme_toggle.setStyleSheet(get_theme_toggle_style(self.current_theme))
+        if hasattr(self, 'lang_toggle'):
+            self.lang_toggle.setStyleSheet(get_lang_toggle_style(self.current_theme))
+        if hasattr(self, 'show_password_btn'):
+            self.show_password_btn.setStyleSheet(get_password_toggle_style(self.current_theme))
+
     def setup_title(self, layout):
-        title = QLabel(TITLE_TEXT)
-        title.setStyleSheet(TITLE_STYLE)
-        title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
+        self.title = QLabel(self.tr("title"))
+        self.title.setStyleSheet(get_title_style(self.current_theme))
+        self.title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.title)
 
     def setup_file_selection(self, layout):
-        browse_btn = QPushButton(FILE_BUTTON_TEXT)
-        browse_btn.clicked.connect(self.browse_file)
-        layout.addWidget(browse_btn)
+        self.browse_btn = QPushButton(self.tr("file_button"))
+        self.browse_btn.clicked.connect(self.browse_file)
+        layout.addWidget(self.browse_btn)
         
         self.file_path = QLineEdit()
-        self.file_path.setPlaceholderText(FILE_PLACEHOLDER)
+        self.file_path.setPlaceholderText(self.tr("file_placeholder"))
         self.file_path.setReadOnly(True)
         layout.addWidget(self.file_path)
 
     def setup_password_input(self, layout):
         password_layout = QHBoxLayout()
+        password_layout.setSpacing(0)  # Boşluğu kaldır
+        password_layout.setContentsMargins(0, 0, 0, 0)  # Kenar boşluklarını kaldır
         
         self.password = QLineEdit()
-        self.password.setPlaceholderText(PASSWORD_PLACEHOLDER)
+        self.password.setObjectName("password")  # CSS seçici için ID ekle
+        self.password.setPlaceholderText(self.tr("password_placeholder"))
         self.password.setEchoMode(QLineEdit.Password)
         
         self.show_password_btn = QPushButton("👁")
-        self.show_password_btn.setFixedWidth(40)
+        self.show_password_btn.setStyleSheet(get_password_toggle_style(self.current_theme))
         self.show_password_btn.pressed.connect(lambda: self.password.setEchoMode(QLineEdit.Normal))
         self.show_password_btn.released.connect(lambda: self.password.setEchoMode(QLineEdit.Password))
         
@@ -72,8 +149,8 @@ class MainWindow(QMainWindow):
 
     def setup_buttons(self, layout):
         buttons_layout = QHBoxLayout()
-        self.encrypt_btn = QPushButton(ENCRYPT_BUTTON_TEXT)
-        self.decrypt_btn = QPushButton(DECRYPT_BUTTON_TEXT)
+        self.encrypt_btn = QPushButton(self.tr("encrypt_button"))
+        self.decrypt_btn = QPushButton(self.tr("decrypt_button"))
         
         self.encrypt_btn.clicked.connect(lambda: self.process_file('encrypt'))
         self.decrypt_btn.clicked.connect(lambda: self.process_file('decrypt'))
@@ -88,19 +165,24 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.progress)
 
         self.status_label = QLabel()
-        self.status_label.setStyleSheet(STATUS_STYLE)
+        self.status_label.setStyleSheet(get_status_style(self.current_theme))
         self.status_label.setAlignment(Qt.AlignCenter)
         self.status_label.setVisible(False)
         layout.addWidget(self.status_label)
 
     def browse_file(self):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Dosya Seç")
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            self.tr("file_select_title"),
+            "",  # Başlangıç dizini
+            self.tr("file_filter")  # Dosya filtresi
+        )
         if file_path:
             self.file_path.setText(file_path)
 
     def process_file(self, operation):
         if not self.file_path.text() or not self.password.text():
-            QMessageBox.warning(self, ERROR_TITLE, "Lütfen dosya ve şifre giriniz!")
+            QMessageBox.warning(self, self.tr("error_title"), self.tr("input_required"))
             return
 
         self.update_ui_for_processing()
@@ -112,7 +194,7 @@ class MainWindow(QMainWindow):
         self.progress.setVisible(True)
         self.progress.setValue(0)
         self.status_label.setVisible(True)
-        self.status_label.setText("İşlem başlatılıyor...")
+        self.status_label.setText(self.tr("processing_started"))
         
     def start_worker(self, operation):
         self.worker = CryptoWorker(operation, self.file_path.text(), self.password.text())
@@ -123,37 +205,42 @@ class MainWindow(QMainWindow):
 
     def update_progress(self, value):
         self.progress.setValue(value)
-        self.status_label.setText(PROCESSING_TEXT.format(value))
+        self.status_label.setText(self.tr("processing").format(value))
 
     def process_completed(self, output_path):
         self.progress.setValue(100)
-        self.status_label.setText(COMPLETED_TEXT)
+        self.status_label.setText(self.tr("completed"))
         self.encrypt_btn.setEnabled(True)
         self.decrypt_btn.setEnabled(True)
         
-        # İşlem başarılı mesajını göster
-        QMessageBox.information(self, SUCCESS_TITLE, SUCCESS_MESSAGE.format(output_path))
+        QMessageBox.information(
+            self,
+            self.tr("success_title"),
+            self.tr("success_message").format(output_path)
+        )
         
-        # Kullanıcıya orijinal dosyayı silmek isteyip istemediğini sor
         reply = QMessageBox.question(
             self,
-            "Dosya Silme",
-            "Orijinal dosyayı silmek ister misiniz?",
+            self.tr("delete_file_title"),
+            self.tr("delete_file_message"),
             QMessageBox.Yes | QMessageBox.No,
             QMessageBox.No
         )
         
-        # Eğer kullanıcı evet derse, orijinal dosyayı sil
         if reply == QMessageBox.Yes:
             try:
                 os.remove(self.file_path.text())
-                QMessageBox.information(self, "Başarılı", "Orijinal dosya silindi.")
-                self.file_path.clear()  # Dosya yolu alanını temizle
+                QMessageBox.information(
+                    self,
+                    self.tr("success_title"),
+                    self.tr("file_deleted")
+                )
+                self.file_path.clear()
             except Exception as e:
                 QMessageBox.warning(
                     self,
-                    "Uyarı",
-                    f"Dosya silinirken bir hata oluştu: {str(e)}"
+                    self.tr("warning_title"),
+                    self.tr("file_delete_error").format(str(e))
                 )
 
     def process_error(self, error_message):
@@ -161,4 +248,32 @@ class MainWindow(QMainWindow):
         self.status_label.setVisible(False)
         self.encrypt_btn.setEnabled(True)
         self.decrypt_btn.setEnabled(True)
-        QMessageBox.critical(self, ERROR_TITLE, error_message) 
+        QMessageBox.critical(self, self.tr("error_title"), error_message)
+
+    def toggle_language(self):
+        self.current_lang = "EN" if self.current_lang == "TR" else "TR"
+        self.lang_toggle.setText(self.current_lang)
+        self.update_texts()
+        
+    def update_texts(self):
+        """Tüm metinleri güncelle"""
+        self.setWindowTitle(self.tr("app_name"))
+        self.title.setText(self.tr("title"))
+        
+        # Dosya seçimi ile ilgili metinler
+        self.browse_btn.setText(self.tr("file_button"))
+        self.file_path.setPlaceholderText(self.tr("file_placeholder"))
+        
+        # Şifre alanı metinleri
+        self.password.setPlaceholderText(self.tr("password_placeholder"))
+        
+        # Ana butonların metinleri
+        self.encrypt_btn.setText(self.tr("encrypt_button"))
+        self.decrypt_btn.setText(self.tr("decrypt_button"))
+        
+        # İşlem durumu metinleri
+        if self.status_label.isVisible():
+            if self.progress.value() == 100:
+                self.status_label.setText(self.tr("completed"))
+            else:
+                self.status_label.setText(self.tr("processing").format(self.progress.value())) 
