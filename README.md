@@ -11,6 +11,9 @@ Python ve PySide6 ile geliştirilmiş modern ve güvenli bir dosya şifreleme uy
 - 👁 Parola görünürlük kontrolü
 - 🔄 Şifreleme ve şifre çözme desteği
 - 🗑️ İşlem sonrası orijinal dosyayı güvenli silme seçeneği
+- 🌙 Koyu/Açık tema desteği
+- 🌐 Türkçe/İngilizce dil desteği
+- 🎯 Geliştirilmiş buton yerleşimi ve kullanıcı deneyimi
 
 ## Gereksinimler
 
@@ -38,10 +41,12 @@ pip install -r requirements.txt
 python main.py
 ```
 
-2. "Dosya Seç" butonuna tıklayarak bir dosya seçin
-3. Şifrenizi girin
-4. Şifrelemek için "Şifrele", şifre çözme için "Şifre Çöz" butonuna tıklayın
-5. İşlem tamamlandıktan sonra, orijinal dosyayı silmek isteyip istemediğinizi seçin
+2. İsterseniz sağ üstteki 🌙/☀️ butonu ile temayı değiştirebilirsiniz
+3. Sol üstteki TR/EN butonu ile dili değiştirebilirsiniz
+4. "Dosya Seç" butonuna tıklayarak bir dosya seçin
+5. Şifrenizi girin (👁 butonu ile şifreyi görüntüleyebilirsiniz)
+6. Şifrelemek için "Şifrele", şifre çözme için "Şifre Çöz" butonuna tıklayın
+7. İşlem tamamlandıktan sonra, orijinal dosyayı silmek isteyip istemediğinizi seçin
 
 ## Güvenlik
 
