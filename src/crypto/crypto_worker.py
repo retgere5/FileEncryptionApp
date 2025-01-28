@@ -31,6 +31,8 @@ class CryptoWorker(QThread):
         self._password = password.encode()
         self._key = None
         self._salt = None
+        file_size = os.path.getsize(file_path)
+        self.CHUNK_SIZE = max(64 * 1024, min(file_size // 100, 4 * 1024 * 1024))  # 64KB - 4MB
 
     def __del__(self):
         self._secure_cleanup()

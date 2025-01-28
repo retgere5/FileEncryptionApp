@@ -4,16 +4,18 @@ Python ve PySide6 ile geliştirilmiş modern ve güvenli bir dosya şifreleme uy
 
 ## Özellikler
 
-- 🔒 Fernet simetrik şifreleme ile dosya şifreleme
+- 🔒 Fernet simetrik şifreleme ile dosya şifreleme (AES-128 CBC)
 - 🔑 Parola tabanlı anahtar türetme (PBKDF2)
 - 🎨 Modern ve kullanıcı dostu arayüz
-- 📊 Gerçek zamanlı ilerleme takibi
+- 📊 Akıllı ilerleme çubuğu ve dinamik bellek yönetimi
+- 🎚️ Dosya boyutuna göre otomatik optimizasyon
 - 👁 Parola görünürlük kontrolü
 - 🔄 Şifreleme ve şifre çözme desteği
 - 🗑️ İşlem sonrası orijinal dosyayı güvenli silme seçeneği
 - 🌙 Koyu/Açık tema desteği
 - 🌐 Türkçe/İngilizce dil desteği
 - 🎯 Geliştirilmiş buton yerleşimi ve kullanıcı deneyimi
+- 🛡️ Gelişmiş şifre güçlülük göstergesi (12+ karakter, çeşitlilik kontrolü)
 
 ## Gereksinimler
 

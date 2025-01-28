@@ -130,13 +130,14 @@ class MainWindow(QMainWindow):
 
     def setup_password_input(self, layout):
         password_layout = QHBoxLayout()
-        password_layout.setSpacing(0)  # Boşluğu kaldır
-        password_layout.setContentsMargins(0, 0, 0, 0)  # Kenar boşluklarını kaldır
+        password_layout.setSpacing(0)
+        password_layout.setContentsMargins(0, 0, 0, 0)
         
         self.password = QLineEdit()
-        self.password.setObjectName("password")  # CSS seçici için ID ekle
+        self.password.setObjectName("password")
         self.password.setPlaceholderText(self.tr("password_placeholder"))
         self.password.setEchoMode(QLineEdit.Password)
+        self.password.textChanged.connect(self.check_password_strength)
         
         self.show_password_btn = QPushButton("👁")
         self.show_password_btn.setStyleSheet(get_password_toggle_style(self.current_theme))
@@ -146,6 +147,19 @@ class MainWindow(QMainWindow):
         password_layout.addWidget(self.password)
         password_layout.addWidget(self.show_password_btn)
         layout.addLayout(password_layout)
+
+    def check_password_strength(self):
+        password = self.password.text()
+        has_upper = any(c.isupper() for c in password)
+        has_lower = any(c.islower() for c in password)
+        has_digit = any(c.isdigit() for c in password)
+        has_special = any(not c.isalnum() for c in password)
+        
+        strength = sum([len(password) >= 12, has_upper, has_lower, has_digit, has_special])
+        
+        # Renk skalası: Kırmızı -> Turuncu -> Sarı -> Yeşil
+        colors = ["#ff0000", "#ff8000", "#ffff00", "#a0ff00", "#00ff00"]
+        self.password.setStyleSheet(f"border: 2px solid {colors[strength]};")
 
     def setup_buttons(self, layout):
         buttons_layout = QHBoxLayout()

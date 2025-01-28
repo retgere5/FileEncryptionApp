@@ -94,4 +94,6 @@ cover/
 
 # Logs
 *.log
-crypto_errors.log 
+crypto_errors.log
+password_strength.log
+performance_metrics.log 
